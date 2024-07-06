@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <nav>
+        <ul>
+            <li>MyTicTacToe.com</li>
+        </ul>
+    </nav>
+    <div class="gameContainer">
+        <div class="UserInfo">
+            <h2>You : <span id="user"></span></h2>
+            <br />
+            <h2>Opponent : <span id="oppName"></span></h2>
+        </div>
+        <div class="container">
+            <div class="line"></div>
+            <div class="box bt-0 bl-0"><span class="boxtext" id="1"></span></div>
+            <div class="box bt-0"><span class="boxtext" id="2"></span></div>
+            <div class="box bt-0 br-0"><span class="boxtext" id="3"></span></div>
+            <div class="box bl-0"><span class="boxtext" id="4"></span></div>
+            <div class="box"><span class="boxtext" id="5"></span></div>
+            <div class="box br-0"><span class="boxtext" id="6"></span></div>
+            <div class="box bb-0 bl-0"><span class="boxtext" id="7"></span></div>
+            <div class="box bb-0"><span class="boxtext" id="8"></span></div>
+            <div class="box bb-0 br-0"><span class="boxtext" id="9"></span></div>
+        </div>
+        <div class="gameInfo">
+            <h1>Welcome to Tic-Tac-Toe</h1>
+            <div>
+                <span class="info">Turn for X</span>
+                <button id="reset">Reset</button>
+            </div>
+        </div>
+        <div class="imgbox">
+            <img src="excited.gif" alt="">
+        </div>
+    </div>
+    <div class="Login">
+        <div class="login-info">
+            <p>Enter Name :</p>
+            <input id="name" type="text">
+        </div>
+        <div class="Searchplayer">
+            <button type="button" id="Search">Search for a player</button>
+            <img id="Loading" src="Serach-Icon.gif" alt="">
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const box = document.querySelectorAll(".box")
+        const container = document.querySelector(".container")
+        const boxtext = document.querySelectorAll(".boxtext")
+        const turninfo = document.querySelector(".info")
+        document.getElementById("Loading").style.display = "none"
+        console.log(document.getElementById("Loading"))
+        document.querySelector(".gameContainer").style.display = "none"
+
+        const socket = io();
+
+        let name;
+        //Login Function start
+        document.getElementById("Search").addEventListener("click", function () {
+            name = document.getElementById("name").value
+            document.getElementById("user").innerText = name
+
+            if (name == null || name == '') {
+                alert("enter a name")
+            }
+            else {
+                socket.emit("Search", { name: name })
+                document.getElementById("Loading").style.display = "block"
+                document.getElementById("Search").disabled = true
+            }
+        })
+
+        socket.on("Search", (e) => {
+            console.log(e);
+            let allPlayersArray = e.allPlayers
+            console.log(allPlayersArray);
+            document.querySelector(".Login").style.display = "none"
+            document.querySelector(".gameContainer").style.display = "flex"
+
+            let oppName
+            let value
+
+            const foundobj = allPlayersArray.find(obj => obj.p1.p1name == `${name}` || obj.p2.p2name == `${name}`)
+
+            //console.log(foundobj);
+
+            foundobj.p1.p1name == `${name}` ? oppname = foundobj.p2.p2name : oppname = foundobj.p1.p1name
+            //console.log(foundobj.p1.p1name)
+            //console.log(foundobj.p2.p2name)
+            foundobj.p1.p1name == `${name}` ? value = foundobj.p2.p2value : value = foundobj.p1.p1value
+
+            document.getElementById("oppName").innerText = oppname
+
+        })
+
+        //Login Function end
+        // Handle X-Y turn for user
+        var turn = "X"
+        var turn_audio = new Audio("ting.mp3")
+        function handleText(e) {
+            turn_audio.play();
+            var span = e.currentTarget.querySelector('.boxtext');
+            console.log(span)
+
+            if (span.innerText == "") {
+                span.innerText = turn;
+                socket.emit("playing", { turn: turn, id: span.id, name: name })
+                turn == 'X' ? turn = 'O' : turn = "X";
+            }
+            //TODO - Add step to check win and game over
+            checkWin();
+        };
+
+        box.forEach(function (div) {
+            div.addEventListener('click', handleText);
+        });
+
+        socket.on("playing", (e) => {
+            const foundobject = (e.allPlayers).find(obj => obj.p1.p1name == `${name}` || obj.p2.p2name == `${name}`)
+            p1id = foundobject.p1.p1move
+            p2id = foundobject.p2.p2move
+            p1turn = foundobject.p1.p1turn
+            p2turn = foundobject.p2.p2turn
+            
+            
+            if ((foundobject.sum) % 2 == 0) {
+                turninfo.innerText = `Turn for O`
+                turn = "O"
+            }
+            else {
+                turninfo.innerText = `Turn for X`
+                turn = "X"
+            }
+
+            if (p1id != '') {
+                turn_audio.play();
+                document.getElementById(`${p1id}`).innerText = "X"               
+            }
+            if (p2id != '') {
+                document.getElementById(`${p2id}`).innerText = "O"
+            }
+            checkWin();
+
+        })
+
+        //Check If Someone is Winning
+        const checkWin = () => {
+            let boxtext = document.getElementsByClassName('boxtext');
+            let wins = [
+                [0, 1, 2, 5, 5, 0],
+                [3, 4, 5, 5, 15, 0],
+                [6, 7, 8, 5, 25, 0],
+                [0, 3, 6, -5, 15, 90],
+                [1, 4, 7, 5, 15, 90],
+                [2, 5, 8, 15, 15, 90],
+                [0, 4, 8, 5, 15, 45],
+                [2, 4, 6, 5, 15, 135],
+            ]
+            wins.forEach(e => {
+                if ((boxtext[e[0]].innerText === boxtext[e[1]].innerText) && (boxtext[e[2]].innerText === boxtext[e[1]].innerText) && (boxtext[e[0]].innerText !== "")) {
+                    document.querySelector('.info').innerText = boxtext[e[0]].innerText + " Won"
+                    document.getElementsByClassName("info")[0].style.backgroundColor = 'yellow'
+                    isgameover = true
+                    document.querySelector('.imgbox').getElementsByTagName('img')[0].style.width = "200px";
+                    document.querySelector(".line").style.transform = `translate(${e[3]}vw, ${e[4]}vw) rotate(${e[5]}deg)`
+                    document.querySelector(".line").style.width = "20vw";
+                }
+            })
+        }
+
+
+    </script>
+</body>
+
+</html>
